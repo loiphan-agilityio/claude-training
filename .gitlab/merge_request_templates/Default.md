@@ -15,6 +15,6 @@ Closes #
 
 ## Checklist
 
-- [ ] MR title follows `type(TICKET): subject`
+- [ ] MR title follows `Prefix/Title` (Feature/, Bugfix/, Refactor/, Chore/, Docs/, Test/)
 - [ ] Tests added or updated
 - [ ] `npm run lint`, `npm test` and `npm run build` pass
