@@ -39,3 +39,11 @@ Hooks are installed by `npm install` (`prepare` → `lefthook install`), configu
 Branches are named `<type>/<ticket-id>-<slug>` (e.g. `chore/K005-commitlint-lefthook`).
 
 MR titles are **not** in commit format. They use a capitalised prefix, a slash, then the title: `Prefix/Title` (e.g. `Feature/Add drag and drop between columns`). Prefixes: `Feature/`, `Bugfix/`, `Refactor/`, `Chore/`, `Docs/`, `Test/`. The same rule is the checklist item in `.gitlab/merge_request_templates/Default.md`; change both together.
+
+MR descriptions: the MR tool's `body` is free-form and does **not** apply the template, so build it from `.gitlab/merge_request_templates/Default.md` yourself. Read that file first, then keep its headings and order (`## What`, `## How to test`, `## Screenshots`, `## Checklist`) and fill each in:
+
+- **What**: what changed and why, in a few lines. `Closes #` takes the GitLab issue number (e.g. `Closes #7`), not the `K00N` ticket id.
+- **How to test**: real, numbered steps (commands, or what to click and expect). Don't leave the `1.`/`2.` placeholders.
+- **Screenshots**: delete the section when there is no UI change (the template says so).
+- **Checklist**: keep every item. Tick `[x]` only what you actually ran or confirmed this session; leave the rest `[ ]`.
+- Remove the `<!-- ... -->` hints. Never open an MR with the empty template or a free-form body.
