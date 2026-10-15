@@ -1,6 +1,28 @@
+import {
+  closestCorners,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type {
+  Announcements,
+  DragEndEvent,
+  UniqueIdentifier,
+} from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useState } from 'react'
-import { initialColumns } from './board'
+import Card from './components/Card'
 import Column from './components/Column'
+import { useBoardStore } from './store'
+
+const dotColors: Record<string, string> = {
+  todo: 'bg-indigo-500',
+  'in-progress': 'bg-amber-500',
+  done: 'bg-emerald-500',
+}
 
 function App() {
   const [isDark, setIsDark] = useState(() => {
@@ -19,13 +41,60 @@ function App() {
     }
   }, [isDark])
 
-  const totalCards = initialColumns.reduce(
-    (sum, col) => sum + col.cards.length,
-    0,
+  const columns = useBoardStore((state) => state.columns)
+  const moveCard = useBoardStore((state) => state.moveCard)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   )
 
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
+
+  const totalCards = columns.reduce((sum, col) => sum + col.cards.length, 0)
+  // an id is either a column's or one of its cards'
+  const findColumn = (id: UniqueIdentifier) =>
+    columns.find((c) => c.id === id || c.cards.some((card) => card.id === id))
+  const findCard = (id: UniqueIdentifier | null) =>
+    columns.flatMap((c) => c.cards).find((card) => card.id === id)
+  const cardTitle = (id: UniqueIdentifier) => findCard(id)?.title
+  const activeCard = findCard(activeId)
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => `Picked up ${cardTitle(active.id)}.`,
+    onDragOver: ({ active, over }) =>
+      over
+        ? `${cardTitle(active.id)} is over ${findColumn(over.id)?.title}.`
+        : undefined,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? `Dropped ${cardTitle(active.id)} in ${findColumn(over.id)?.title}.`
+        : `${cardTitle(active.id)} was dropped outside a column.`,
+    onDragCancel: ({ active }) =>
+      `Cancelled. ${cardTitle(active.id)} was not moved.`,
+  }
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null)
+
+    const column = over && findColumn(over.id)
+
+    if (!over || !column) {
+      return
+    }
+
+    const overIndex = column.cards.findIndex((card) => card.id === over.id)
+
+    // over a column, not a card: append
+    moveCard(
+      String(active.id),
+      column.id,
+      overIndex === -1 ? column.cards.length : overIndex,
+    )
+  }
+
   return (
-    <main className="relative min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200 dark:bg-[#090d16] dark:text-slate-100 flex flex-col">
+    <main className="relative min-h-screen overflow-x-clip bg-slate-50 text-slate-900 transition-colors duration-200 dark:bg-[#090d16] dark:text-slate-100 flex flex-col">
       {/* Ambient background glows & grid */}
       <div
         aria-hidden="true"
@@ -38,7 +107,7 @@ function App() {
 
       {/* Top Application Bar */}
       <header className="relative z-10 border-b border-slate-200/80 bg-white/70 px-6 py-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/60">
-        <div className="mx-auto flex flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           {/* Brand & Title */}
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20">
@@ -79,46 +148,16 @@ function App() {
                 {totalCards} tasks
               </span>
               <span className="text-slate-300 dark:text-slate-700">·</span>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-indigo-500" />
-                <span>3 Todo</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                <span>2 In Progress</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>1 Done</span>
-              </div>
-            </div>
-
-            {/* Team stack */}
-            <div className="hidden md:flex -space-x-1.5 overflow-hidden">
-              <div
-                title="Alice"
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-indigo-500 text-[10px] font-bold text-white shadow-xs dark:border-slate-900"
-              >
-                A
-              </div>
-              <div
-                title="Bob"
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-[10px] font-bold text-white shadow-xs dark:border-slate-900"
-              >
-                B
-              </div>
-              <div
-                title="Carol"
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[10px] font-bold text-white shadow-xs dark:border-slate-900"
-              >
-                C
-              </div>
-              <div
-                title="Dave"
-                className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-[10px] font-bold text-white shadow-xs dark:border-slate-900"
-              >
-                D
-              </div>
+              {columns.map((column) => (
+                <div key={column.id} className="flex items-center gap-1.5">
+                  <span
+                    className={`h-2 w-2 rounded-full ${dotColors[column.id] ?? 'bg-slate-400'}`}
+                  />
+                  <span>
+                    {column.cards.length} {column.title}
+                  </span>
+                </div>
+              ))}
             </div>
 
             {/* Theme Toggle Button */}
@@ -165,7 +204,7 @@ function App() {
       </header>
 
       {/* Main Board Viewport */}
-      <div className="relative z-10 flex-1 p-6 sm:p-8">
+      <div className="relative z-10 flex-1 w-full max-w-6xl mx-auto p-6 sm:p-8">
         {/* Toolbar / Quick Filters bar */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -200,11 +239,28 @@ function App() {
           tabIndex={0}
           className="custom-scrollbar overflow-x-auto pb-4 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50 rounded-2xl"
         >
-          <div className="flex items-start gap-5">
-            {initialColumns.map((column) => (
-              <Column key={column.id} column={column} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={({ active }) => setActiveId(active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+            accessibility={{ announcements }}
+          >
+            <div className="flex items-start gap-5">
+              {columns.map((column) => (
+                <Column key={column.id} column={column} />
+              ))}
+            </div>
+            {/* the sortable card itself only follows the pointer inside its own column */}
+            <DragOverlay>
+              {activeCard && (
+                <div className="cursor-grabbing rounded-xl bg-white shadow-xl dark:bg-slate-900">
+                  <Card card={activeCard} />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
       </div>
     </main>

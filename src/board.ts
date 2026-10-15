@@ -73,3 +73,27 @@ export const initialColumns: Column[] = [
     ],
   },
 ]
+
+// Same column behaves like arrayMove: remove first, then insert at toIndex.
+export const moveCard = (
+  columns: Column[],
+  cardId: string,
+  toColumnId: string,
+  toIndex: number,
+): Column[] => {
+  const card = columns.flatMap((c) => c.cards).find((c) => c.id === cardId)
+
+  if (!card || !columns.some((c) => c.id === toColumnId)) {
+    return columns
+  }
+
+  return columns.map((column) => {
+    const cards = column.cards.filter((c) => c.id !== cardId)
+
+    if (column.id === toColumnId) {
+      cards.splice(toIndex, 0, card)
+    }
+
+    return { ...column, cards }
+  })
+}

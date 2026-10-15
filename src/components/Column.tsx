@@ -1,5 +1,7 @@
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Column as ColumnData } from '../board'
-import Card from './Card'
+import SortableCard from './SortableCard'
 
 const columnStyles: Record<string, { dotClass: string; badgeClass: string }> = {
   todo: {
@@ -21,6 +23,7 @@ const columnStyles: Record<string, { dotClass: string; badgeClass: string }> = {
 
 function Column({ column }: { column: ColumnData }) {
   const titleId = `${column.id}-title`
+  const { setNodeRef } = useDroppable({ id: column.id })
   const style = columnStyles[column.id] ?? {
     dotClass: 'bg-slate-400',
     badgeClass:
@@ -29,6 +32,7 @@ function Column({ column }: { column: ColumnData }) {
 
   return (
     <section
+      ref={setNodeRef}
       aria-labelledby={titleId}
       className="flex w-80 shrink-0 flex-col rounded-2xl border border-slate-200/80 bg-slate-100/60 p-3.5 backdrop-blur-sm dark:border-slate-800/80 dark:bg-slate-900/60 shadow-xs"
     >
@@ -93,13 +97,18 @@ function Column({ column }: { column: ColumnData }) {
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {column.cards.map((card) => (
-            <li key={card.id}>
-              <Card card={card} />
-            </li>
-          ))}
-        </ul>
+        <SortableContext
+          items={column.cards.map((card) => card.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="space-y-3">
+            {column.cards.map((card) => (
+              <li key={card.id}>
+                <SortableCard card={card} />
+              </li>
+            ))}
+          </ul>
+        </SortableContext>
       )}
     </section>
   )
