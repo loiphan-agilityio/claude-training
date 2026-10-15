@@ -23,9 +23,9 @@ npx vitest run -t "renders the Kanban"     # one test by name
 ## Tooling notes
 
 - **Tests**: Vitest config lives in `vite.config.ts` (jsdom environment). `src/test/setup.ts` loads `@testing-library/jest-dom/vitest`, so `toBeInTheDocument()` etc. work without imports. Tests sit next to the source as `*.test.tsx`.
-- **Lint**: `.oxlintrc.json` enables the `react`, `typescript`, `oxc` plugins; `react/rules-of-hooks` is an error, `react/only-export-components` a warning.
+- **Lint**: `.oxlintrc.json` enables the `react`, `typescript`, `oxc` plugins; `react/rules-of-hooks` is an error, `react/only-export-components` a warning. Blank lines between statements are enforced by `@stylistic/padding-line-between-statements`, loaded as an oxlint `jsPlugins` entry (alpha); `npx oxlint --fix` inserts them.
 - **Format**: Prettier with no semicolons and single quotes. `.claude/skills` and `skills-lock.json` are in `.prettierignore` because they are vendored third-party files.
-- **Skills**: `.claude/skills/` holds skills installed with `npx skills add <owner/repo@skill> -y --copy -a claude-code` and pinned in `skills-lock.json`. Update with `npx skills update`; don't hand-edit them.
+- **Skills**: `.claude/skills/` holds skills installed with `npx skills add <owner/repo@skill> -y --copy -a claude-code` and pinned in `skills-lock.json`. Update with `npx skills update`; don't hand-edit them. Exception: `unit-test/` is ours (not in the lock file): the house rules for tests and faker mock factories in `src/mocks/`; edit it directly.
 - **TypeScript**: `tsconfig.app.json` is strict about `noUnusedLocals`/`noUnusedParameters`, `verbatimModuleSyntax` (use `import type` for type-only imports) and `erasableSyntaxOnly` (no enums, namespaces or constructor parameter properties).
 
 ## Git workflow
