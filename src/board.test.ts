@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { Column } from './board'
-import { addCard, moveCard, updateCard } from './board'
+import { addCard, deleteCard, moveCard, updateCard } from './board'
 import { buildCard, buildColumn } from './mocks/board'
 
 const buildBoard = () => {
@@ -122,6 +122,37 @@ it('does not mutate the columns when updating a card', () => {
   const snapshot = structuredClone(columns)
 
   updateCard(columns, a.id, fields)
+
+  expect(columns).toEqual(snapshot)
+})
+
+it('removes only the card and keeps the rest in order', () => {
+  const { columns, a, b, c, d } = buildBoard()
+  const [after, other] = deleteCard(columns, b.id)
+
+  expect(ids(after)).toEqual([a.id, c.id])
+  expect(ids(other)).toEqual([d.id])
+})
+
+it('leaves the other columns as they were', () => {
+  const { columns, a, doing, empty } = buildBoard()
+  const [, other, untouched] = deleteCard(columns, a.id)
+
+  expect(other).toEqual(doing)
+  expect(untouched).toEqual(empty)
+})
+
+it('returns the columns unchanged for an unknown card', () => {
+  const { columns } = buildBoard()
+
+  expect(deleteCard(columns, 'missing-card')).toEqual(columns)
+})
+
+it('does not mutate the columns when deleting a card', () => {
+  const { columns, a } = buildBoard()
+  const snapshot = structuredClone(columns)
+
+  deleteCard(columns, a.id)
 
   expect(columns).toEqual(snapshot)
 })

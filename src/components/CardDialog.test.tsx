@@ -1,8 +1,8 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import App from '../App'
-import type { Card } from '../board'
+import type { Card, Column } from '../board'
 import { buildCard, buildColumn } from '../mocks/board'
 import { useBoardStore } from '../store'
 
@@ -14,6 +14,7 @@ const dueDateLabel = 'Due date'
 const addButtonName = 'Add card'
 const saveButtonName = 'Save'
 const cancelButtonName = 'Cancel'
+const deleteButtonName = 'Delete'
 const editDialogName = 'Edit card'
 const highPriorityLabel = 'High'
 const newTitle = 'Write release notes'
@@ -58,9 +59,15 @@ const renderAddedBoard = async () => {
   return board
 }
 
-const renderEditBoard = async (overrides?: Partial<Card>) => {
+const renderEditBoard = async (
+  overrides?: Partial<Card>,
+  siblings?: Card[],
+) => {
   const card = buildCard(overrides)
-  const column = buildColumn({ cards: [buildCard(), card, buildCard()] })
+  const others = siblings ?? [buildCard(), buildCard()]
+  const column = buildColumn({
+    cards: [...others.slice(0, 1), card, ...others.slice(1)],
+  })
   const user = userEvent.setup()
 
   useBoardStore.setState({ columns: [column, buildColumn()] })
@@ -304,4 +311,160 @@ it('reopens with the saved values after Cancel', async () => {
 
   expect(reopened.getByLabelText(titleLabel)).toHaveValue(card.title)
   expect(reopened.getByLabelText(priorityLabel)).toHaveValue(card.priority)
+})
+
+// opens Delete on the edited card and returns its confirm dialog
+const renderConfirmBoard = async (
+  ...args: Parameters<typeof renderEditBoard>
+) => {
+  const board = await renderEditBoard(...args)
+  const { user, card, ui } = board
+
+  await user.click(ui.getByRole('button', { name: deleteButtonName }))
+
+  const confirm = screen.getByRole<HTMLDialogElement>('dialog', {
+    name: `Delete “${card.title}”?`,
+  })
+
+  return { ...board, confirm, confirmUi: within(confirm) }
+}
+
+const renderDeletedBoard = async (
+  ...args: Parameters<typeof renderConfirmBoard>
+) => {
+  const board = await renderConfirmBoard(...args)
+
+  await board.user.click(
+    board.confirmUi.getByRole('button', { name: deleteButtonName }),
+  )
+
+  return board
+}
+
+const getAddButton = (column: Column) =>
+  screen.getByRole('button', { name: `Add card to ${column.title}` })
+
+it('has a Delete button in the Edit dialog', async () => {
+  const { ui } = await renderEditBoard()
+
+  expect(ui.getByRole('button', { name: deleteButtonName })).toBeInTheDocument()
+})
+
+it('has no Delete button in the Add dialog', async () => {
+  const { ui } = await renderAddBoard()
+
+  expect(
+    ui.queryByRole('button', { name: deleteButtonName }),
+  ).not.toBeInTheDocument()
+})
+
+it('asks for confirmation in a dialog named after the card', async () => {
+  const { confirm } = await renderConfirmBoard()
+
+  expect(confirm).toBeVisible()
+})
+
+it('says in the confirm dialog that deleting cannot be undone', async () => {
+  const { confirm } = await renderConfirmBoard()
+
+  expect(confirm).toHaveAccessibleDescription('This cannot be undone.')
+})
+
+it('keeps the card while the confirm dialog is open', async () => {
+  const { column, region } = await renderConfirmBoard()
+
+  expect(getArticles(region)).toHaveLength(column.cards.length)
+})
+
+// the browser focuses the first focusable element of a modal dialog
+it('puts Cancel before Delete in the confirm dialog', async () => {
+  const { confirmUi } = await renderConfirmBoard()
+  const names = confirmUi.getAllByRole('button').map((b) => b.textContent)
+
+  expect(names).toEqual([cancelButtonName, deleteButtonName])
+})
+
+it('removes only that card from the column on confirm', async () => {
+  const { column, card, region } = await renderDeletedBoard()
+  const titles = column.cards.filter((c) => c !== card).map((c) => c.title)
+
+  expect(
+    getArticles(region).map(
+      (a) => within(a).getByRole('heading', { level: 3 }).textContent,
+    ),
+  ).toEqual(titles)
+})
+
+it('closes both dialogs on confirm', async () => {
+  await renderDeletedBoard()
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+it('updates the column and board counts after deleting', async () => {
+  const { column, region } = await renderDeletedBoard()
+  const total = column.cards.length - 1
+
+  expect(within(region).getByText(String(total))).toBeInTheDocument()
+  expect(
+    within(screen.getByRole('banner')).getByText(`${total} ${column.title}`),
+  ).toBeInTheDocument()
+})
+
+it('moves focus to the column + button after deleting', async () => {
+  const { column } = await renderDeletedBoard()
+
+  expect(getAddButton(column)).toHaveFocus()
+})
+
+it('empties the column and still moves focus to + when the last card is deleted', async () => {
+  const { column, region } = await renderDeletedBoard({}, [])
+
+  expect(within(region).queryByRole('article')).not.toBeInTheDocument()
+  expect(within(region).getByText('No cards')).toBeInTheDocument()
+  expect(getAddButton(column)).toHaveFocus()
+})
+
+it('keeps the card and returns to the Edit dialog on Cancel', async () => {
+  const { user, column, dialog, confirm, confirmUi, region } =
+    await renderConfirmBoard()
+
+  await user.click(confirmUi.getByRole('button', { name: cancelButtonName }))
+
+  expect(confirm).not.toBeInTheDocument()
+  expect(dialog).toBeVisible()
+  expect(getArticles(region)).toHaveLength(column.cards.length)
+})
+
+// jsdom has no Esc key: the browser ends Esc by closing the dialog, as done here
+it('keeps the card and returns to the Edit dialog when the confirm dialog is closed with Esc', async () => {
+  const { column, dialog, confirm, region } = await renderConfirmBoard()
+
+  confirm.close()
+
+  await waitFor(() => expect(confirm).not.toBeInTheDocument())
+  expect(dialog).toBeVisible()
+  expect(getArticles(region)).toHaveLength(column.cards.length)
+})
+
+it('keeps the unsaved edits when Cancel returns to the Edit dialog', async () => {
+  const { user, card, dialog, ui } = await renderEditBoard()
+
+  await user.type(ui.getByLabelText(titleLabel), ' edited')
+  await user.click(ui.getByRole('button', { name: deleteButtonName }))
+  await user.click(
+    within(
+      screen.getByRole('dialog', { name: `Delete “${card.title}”?` }),
+    ).getByRole('button', { name: cancelButtonName }),
+  )
+
+  expect(within(dialog).getByLabelText(titleLabel)).toHaveValue(
+    `${card.title} edited`,
+  )
+})
+
+it('does not move focus to the + button after Cancel or Save', async () => {
+  const { column } = await renderSavedBoard()
+
+  expect(getAddButton(column)).not.toHaveFocus()
 })

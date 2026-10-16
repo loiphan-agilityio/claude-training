@@ -51,6 +51,43 @@ it('updates a card in place and saves it', () => {
   expect(saved.state.columns[0].cards[1]).toEqual({ ...fields, id: card.id })
 })
 
+it('deletes a card and saves it', () => {
+  const [todo] = initialColumns
+  const card = todo.cards[1]
+
+  useBoardStore.getState().deleteCard(card.id)
+
+  const remaining = useBoardStore.getState().columns[0].cards
+  const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+
+  expect(remaining.map((c) => c.id)).toEqual(
+    todo.cards.filter((c) => c.id !== card.id).map((c) => c.id),
+  )
+  expect(saved.state.columns[0].cards).toHaveLength(todo.cards.length - 1)
+  expect(JSON.stringify(saved)).not.toContain(card.id)
+})
+
+it('keeps a deleted card gone after a reload', async () => {
+  const [todo] = initialColumns
+  const card = todo.cards[1]
+
+  useBoardStore.getState().deleteCard(card.id)
+
+  const stored = localStorage.getItem(storageKey) ?? ''
+
+  // a reload: memory is back to the sample board, only localStorage remembers
+  useBoardStore.setState(useBoardStore.getInitialState(), true)
+  localStorage.setItem(storageKey, stored)
+  await useBoardStore.persist.rehydrate()
+
+  const ids = useBoardStore
+    .getState()
+    .columns.flatMap((c) => c.cards.map((x) => x.id))
+
+  expect(ids).not.toContain(card.id)
+  expect(ids).toHaveLength(initialColumns.flatMap((c) => c.cards).length - 1)
+})
+
 it('restores the stored board', async () => {
   const columns = [buildColumn(), buildColumn()]
 
