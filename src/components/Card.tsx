@@ -47,7 +47,8 @@ function Card({ card }: { card: CardData }) {
   return (
     <article className="group relative rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/90 dark:hover:border-slate-700 dark:hover:shadow-lg dark:hover:shadow-black/20">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
+        {/* pr-7: room for the Edit button SortableCard puts over this corner */}
+        <h3 className="pr-7 text-sm font-semibold text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
           {card.title}
         </h3>
       </div>

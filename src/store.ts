@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Card, Column } from './board'
-import { addCard, initialColumns, moveCard } from './board'
+import { addCard, initialColumns, moveCard, updateCard } from './board'
 
 type BoardState = {
   columns: Column[]
   moveCard: (cardId: string, toColumnId: string, toIndex: number) => void
   addCard: (columnId: string, card: Omit<Card, 'id'>) => void
+  updateCard: (cardId: string, fields: Omit<Card, 'id'>) => void
 }
 
 export const useBoardStore = create<BoardState>()(
@@ -23,6 +24,10 @@ export const useBoardStore = create<BoardState>()(
             ...card,
             id: crypto.randomUUID(),
           }),
+        })),
+      updateCard: (cardId, fields) =>
+        set((state) => ({
+          columns: updateCard(state.columns, cardId, fields),
         })),
     }),
     {

@@ -108,3 +108,16 @@ export const addCard = (
       ? { ...column, cards: [...column.cards, card] }
       : column,
   )
+
+// Replaces the card's fields, so a field missing from `fields` is cleared.
+export const updateCard = (
+  columns: Column[],
+  cardId: string,
+  fields: Omit<Card, 'id'>,
+): Column[] =>
+  columns.map((column) => ({
+    ...column,
+    cards: column.cards.map((card) =>
+      card.id === cardId ? { ...fields, id: cardId } : card,
+    ),
+  }))
