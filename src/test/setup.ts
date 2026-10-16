@@ -18,3 +18,15 @@ beforeEach(() => {
 beforeEach(() => faker.seed(1))
 // faker.date.* is relative to "now" even when seeded
 faker.setDefaultRefDate('2026-01-01T00:00:00.000Z')
+
+// jsdom has no modal <dialog>: mimic open state and the `close` event
+HTMLDialogElement.prototype.showModal = function () {
+  this.setAttribute('open', '')
+}
+
+HTMLDialogElement.prototype.close = function () {
+  if (this.open) {
+    this.removeAttribute('open')
+    this.dispatchEvent(new Event('close'))
+  }
+}

@@ -1,6 +1,8 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useRef } from 'react'
 import type { Column as ColumnData } from '../board'
+import AddCardDialog from './AddCardDialog'
 import SortableCard from './SortableCard'
 
 const columnStyles: Record<string, { dotClass: string; badgeClass: string }> = {
@@ -23,6 +25,7 @@ const columnStyles: Record<string, { dotClass: string; badgeClass: string }> = {
 
 function Column({ column }: { column: ColumnData }) {
   const titleId = `${column.id}-title`
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const { setNodeRef } = useDroppable({ id: column.id })
   const style = columnStyles[column.id] ?? {
     dotClass: 'bg-slate-400',
@@ -58,6 +61,7 @@ function Column({ column }: { column: ColumnData }) {
         <button
           type="button"
           aria-label={`Add card to ${column.title}`}
+          onClick={() => dialogRef.current?.showModal()}
           className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200 cursor-pointer"
         >
           <svg
@@ -110,6 +114,8 @@ function Column({ column }: { column: ColumnData }) {
           </ul>
         </SortableContext>
       )}
+
+      <AddCardDialog ref={dialogRef} column={column} />
     </section>
   )
 }

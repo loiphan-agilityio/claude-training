@@ -97,3 +97,14 @@ export const moveCard = (
     return { ...column, cards }
   })
 }
+
+export const addCard = (
+  columns: Column[],
+  columnId: string,
+  card: Card,
+): Column[] =>
+  columns.map((column) =>
+    column.id === columnId
+      ? { ...column, cards: [...column.cards, card] }
+      : column,
+  )
