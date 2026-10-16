@@ -16,6 +16,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useState } from 'react'
 import Card from './components/Card'
 import Column from './components/Column'
+import type { PriorityFilter } from './board'
 import { useBoardStore } from './store'
 
 const dotColors: Record<string, string> = {
@@ -51,6 +52,8 @@ function App() {
   )
 
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
+  // view state only: not in the store, so it is neither saved nor restored
+  const [priority, setPriority] = useState<PriorityFilter>('all')
 
   const totalCards = columns.reduce((sum, col) => sum + col.cards.length, 0)
   // an id is either a column's or one of its cards'
@@ -221,9 +224,19 @@ function App() {
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-800" />
             <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               <span>Filter:</span>
-              <span className="rounded-md bg-slate-200/60 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                All Priorities
-              </span>
+              <select
+                aria-label="Filter by priority"
+                value={priority}
+                onChange={(event) =>
+                  setPriority(event.target.value as PriorityFilter)
+                }
+                className="cursor-pointer rounded-md bg-slate-200/60 px-2 py-0.5 text-[11px] font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/50 dark:scheme-dark dark:bg-slate-800 dark:text-slate-300"
+              >
+                <option value="all">All priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
             </div>
           </div>
 
@@ -249,7 +262,7 @@ function App() {
           >
             <div className="flex items-start gap-5">
               {columns.map((column) => (
-                <Column key={column.id} column={column} />
+                <Column key={column.id} column={column} priority={priority} />
               ))}
             </div>
             {/* the sortable card itself only follows the pointer inside its own column */}
