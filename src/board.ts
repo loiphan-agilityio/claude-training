@@ -1,5 +1,7 @@
 export type Priority = 'low' | 'medium' | 'high'
 
+export type PriorityFilter = Priority | 'all'
+
 export type Card = {
   id: string
   title: string

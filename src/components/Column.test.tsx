@@ -1,15 +1,19 @@
 import { render, screen, within } from '@testing-library/react'
 import { expect, it } from 'vitest'
-import type { Column as ColumnData } from '../board'
-import { buildColumn } from '../mocks/board'
+import type { Column as ColumnData, PriorityFilter } from '../board'
+import { buildCard, buildColumn } from '../mocks/board'
 import Column from './Column'
 
 const emptyStateText = 'No cards'
+const noMatchText = 'No matching cards'
 
-const renderColumn = (overrides?: Partial<ColumnData>) => {
+const renderColumn = (
+  overrides?: Partial<ColumnData>,
+  priority?: PriorityFilter,
+) => {
   const column = buildColumn(overrides)
 
-  return { column, ...render(<Column column={column} />) }
+  return { column, ...render(<Column column={column} priority={priority} />) }
 }
 
 it('shows the column title as a heading naming its region', () => {
@@ -54,6 +58,39 @@ it('does not show the empty state when there are cards', () => {
   renderColumn()
 
   expect(screen.queryByText(emptyStateText)).not.toBeInTheDocument()
+})
+
+it('renders only the cards of the selected priority and counts them', () => {
+  const high = buildCard({ priority: 'high' })
+  const low = buildCard({ priority: 'low' })
+
+  renderColumn({ cards: [high, low] }, 'high')
+
+  const list = screen.getByRole('list')
+
+  expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+  expect(
+    within(list).getByRole('heading', { level: 3, name: high.title }),
+  ).toBeInTheDocument()
+  expect(
+    screen.queryByRole('heading', { level: 3, name: low.title }),
+  ).not.toBeInTheDocument()
+  expect(screen.getByText('1')).toBeInTheDocument()
+})
+
+it('says no matching cards when none has the selected priority', () => {
+  renderColumn({ cards: [buildCard({ priority: 'low' })] }, 'high')
+
+  expect(screen.getByText(noMatchText)).toBeInTheDocument()
+  expect(screen.getByText('0')).toBeInTheDocument()
+  expect(screen.queryByRole('list')).not.toBeInTheDocument()
+})
+
+it('keeps the plain empty state when no priority is selected', () => {
+  renderColumn({ cards: [] }, 'all')
+
+  expect(screen.getByText(emptyStateText)).toBeInTheDocument()
+  expect(screen.queryByText(noMatchText)).not.toBeInTheDocument()
 })
 
 it('has an add card button named after the column', () => {

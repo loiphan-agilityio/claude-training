@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useRef, useState } from 'react'
-import type { Card, Column as ColumnData } from '../board'
+import type { Card, Column as ColumnData, PriorityFilter } from '../board'
 import CardDialog from './CardDialog'
 import SortableCard from './SortableCard'
 
@@ -23,8 +23,18 @@ const columnStyles: Record<string, { dotClass: string; badgeClass: string }> = {
   },
 }
 
-function Column({ column }: { column: ColumnData }) {
+function Column({
+  column,
+  priority = 'all',
+}: {
+  column: ColumnData
+  priority?: PriorityFilter
+}) {
   const titleId = `${column.id}-title`
+  const cards =
+    priority === 'all'
+      ? column.cards
+      : column.cards.filter((card) => card.priority === priority)
   // null: closed; {}: add a card; { card }: edit that card
   const [dialog, setDialog] = useState<{ card?: Card } | null>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
@@ -56,7 +66,7 @@ function Column({ column }: { column: ColumnData }) {
           <span
             className={`flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-[11px] font-bold ${style.badgeClass}`}
           >
-            {column.cards.length}
+            {cards.length}
           </span>
         </div>
 
@@ -79,7 +89,7 @@ function Column({ column }: { column: ColumnData }) {
         </button>
       </div>
 
-      {column.cards.length === 0 ? (
+      {cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300/80 py-12 text-center dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/40">
           <div
             aria-hidden="true"
@@ -100,16 +110,16 @@ function Column({ column }: { column: ColumnData }) {
             </svg>
           </div>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            No cards
+            {priority === 'all' ? 'No cards' : 'No matching cards'}
           </p>
         </div>
       ) : (
         <SortableContext
-          items={column.cards.map((card) => card.id)}
+          items={cards.map((card) => card.id)}
           strategy={verticalListSortingStrategy}
         >
           <ul className="space-y-3">
-            {column.cards.map((card) => (
+            {cards.map((card) => (
               <li key={card.id}>
                 <SortableCard card={card} onEdit={() => setDialog({ card })} />
               </li>
@@ -124,10 +134,16 @@ function Column({ column }: { column: ColumnData }) {
           column={column}
           card={dialog.card}
           onClose={(deleted) => {
+            const editedId = dialog.card?.id
+
             setDialog(null)
 
-            // the deleted card's Edit button is gone, so focus would fall to <body>
-            if (deleted) {
+            // the Edit button of a card deleted or edited out of the filter is
+            // gone, so focus would fall to <body>
+            if (
+              deleted ||
+              (editedId && !cards.some((c) => c.id === editedId))
+            ) {
               addButtonRef.current?.focus()
             }
           }}
