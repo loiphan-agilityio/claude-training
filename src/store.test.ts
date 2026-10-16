@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { initialColumns } from './board'
-import { buildColumn } from './mocks/board'
+import { buildCard, buildColumn } from './mocks/board'
 import { useBoardStore } from './store'
 
 const storageKey = 'kanban-board'
@@ -19,6 +19,21 @@ it('saves the board to localStorage when a card moves', () => {
   const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
 
   expect(saved.state.columns[2].cards[0].id).toBe(card.id)
+})
+
+it('adds a card with a fresh id at the bottom of the column and saves it', () => {
+  const { id: _, ...card } = buildCard()
+  const [todo] = initialColumns
+
+  useBoardStore.getState().addCard(todo.id, card)
+  useBoardStore.getState().addCard(todo.id, card)
+
+  const added = useBoardStore.getState().columns[0].cards.slice(-2)
+  const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+
+  expect(added[0]).toMatchObject(card)
+  expect(added[0].id).not.toBe(added[1].id)
+  expect(saved.state.columns[0].cards.at(-1).id).toBe(added[1].id)
 })
 
 it('restores the stored board', async () => {

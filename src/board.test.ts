@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { Column } from './board'
-import { moveCard } from './board'
+import { addCard, moveCard } from './board'
 import { buildCard, buildColumn } from './mocks/board'
 
 const buildBoard = () => {
@@ -69,4 +69,21 @@ it('does not mutate its input', () => {
 
   expect(result).not.toBe(columns)
   expect(columns).toEqual(snapshot)
+})
+
+it('appends a card to the bottom of the given column only', () => {
+  const { columns, a, b, c, d, todo, doing, empty } = buildBoard()
+  const card = buildCard()
+  const [after, other, untouched] = addCard(columns, doing.id, card)
+
+  expect(ids(after)).toEqual([a.id, b.id, c.id])
+  expect(ids(other)).toEqual([d.id, card.id])
+  expect(after.id).toBe(todo.id)
+  expect(untouched).toBe(empty)
+})
+
+it('returns the columns unchanged for an unknown column', () => {
+  const { columns } = buildBoard()
+
+  expect(addCard(columns, 'missing-column', buildCard())).toEqual(columns)
 })
