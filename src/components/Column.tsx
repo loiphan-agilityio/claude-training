@@ -1,6 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Card, Column as ColumnData } from '../board'
 import CardDialog from './CardDialog'
 import SortableCard from './SortableCard'
@@ -27,6 +27,7 @@ function Column({ column }: { column: ColumnData }) {
   const titleId = `${column.id}-title`
   // null: closed; {}: add a card; { card }: edit that card
   const [dialog, setDialog] = useState<{ card?: Card } | null>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
   const { setNodeRef } = useDroppable({ id: column.id })
   const style = columnStyles[column.id] ?? {
     dotClass: 'bg-slate-400',
@@ -60,6 +61,7 @@ function Column({ column }: { column: ColumnData }) {
         </div>
 
         <button
+          ref={addButtonRef}
           type="button"
           aria-label={`Add card to ${column.title}`}
           onClick={() => setDialog({})}
@@ -121,7 +123,14 @@ function Column({ column }: { column: ColumnData }) {
         <CardDialog
           column={column}
           card={dialog.card}
-          onClose={() => setDialog(null)}
+          onClose={(deleted) => {
+            setDialog(null)
+
+            // the deleted card's Edit button is gone, so focus would fall to <body>
+            if (deleted) {
+              addButtonRef.current?.focus()
+            }
+          }}
         />
       )}
     </section>

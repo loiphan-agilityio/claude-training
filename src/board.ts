@@ -109,6 +109,12 @@ export const addCard = (
       : column,
   )
 
+export const deleteCard = (columns: Column[], cardId: string): Column[] =>
+  columns.map((column) => ({
+    ...column,
+    cards: column.cards.filter((card) => card.id !== cardId),
+  }))
+
 // Replaces the card's fields, so a field missing from `fields` is cleared.
 export const updateCard = (
   columns: Column[],

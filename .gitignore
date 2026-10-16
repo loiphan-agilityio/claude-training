@@ -25,3 +25,7 @@ dist-ssr
 
 # playwright-cli session logs (create-mr skill)
 .playwright-cli
+
+# Playwright output (npm run test:e2e)
+test-results
+playwright-report
