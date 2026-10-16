@@ -63,3 +63,14 @@ it('has an add card button named after the column', () => {
     screen.getByRole('button', { name: `Add card to ${column.title}` }),
   ).toBeInTheDocument()
 })
+
+it('has an Edit button named after each card, outside its drag handle', () => {
+  const { column } = renderColumn()
+
+  for (const card of column.cards) {
+    const edit = screen.getByRole('button', { name: `Edit ${card.title}` })
+
+    // a button nested in the draggable role="button" would be invalid
+    expect(edit.closest('[role="button"]')).toBeNull()
+  }
+})

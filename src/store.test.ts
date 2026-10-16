@@ -36,6 +36,21 @@ it('adds a card with a fresh id at the bottom of the column and saves it', () =>
   expect(saved.state.columns[0].cards.at(-1).id).toBe(added[1].id)
 })
 
+it('updates a card in place and saves it', () => {
+  const { id: _, ...fields } = buildCard()
+  const [todo] = initialColumns
+  const card = todo.cards[1]
+
+  useBoardStore.getState().updateCard(card.id, fields)
+
+  const updated = useBoardStore.getState().columns[0].cards
+  const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+
+  expect(updated[1]).toEqual({ ...fields, id: card.id })
+  expect(updated).toHaveLength(todo.cards.length)
+  expect(saved.state.columns[0].cards[1]).toEqual({ ...fields, id: card.id })
+})
+
 it('restores the stored board', async () => {
   const columns = [buildColumn(), buildColumn()]
 

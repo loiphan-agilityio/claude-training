@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { Column } from './board'
-import { addCard, moveCard } from './board'
+import { addCard, moveCard, updateCard } from './board'
 import { buildCard, buildColumn } from './mocks/board'
 
 const buildBoard = () => {
@@ -86,4 +86,42 @@ it('returns the columns unchanged for an unknown column', () => {
   const { columns } = buildBoard()
 
   expect(addCard(columns, 'missing-column', buildCard())).toEqual(columns)
+})
+
+const fields = { title: 'Renamed card', priority: 'low' } as const
+
+it('replaces a card in place and keeps its id, column and position', () => {
+  const { columns, a, b, c, d, todo } = buildBoard()
+  const [after, other] = updateCard(columns, b.id, {
+    ...fields,
+    assignee: 'Zed',
+  })
+
+  expect(after.id).toBe(todo.id)
+  expect(ids(after)).toEqual([a.id, b.id, c.id])
+  expect(after.cards[1]).toStrictEqual({ ...fields, assignee: 'Zed', id: b.id })
+  expect(after.cards[0]).toBe(a)
+  expect(other.cards[0]).toBe(d)
+})
+
+it('clears the optional fields that are left out', () => {
+  const { columns, a } = buildBoard()
+  const [after] = updateCard(columns, a.id, fields)
+
+  expect(after.cards[0]).toStrictEqual({ ...fields, id: a.id })
+})
+
+it('returns the columns unchanged for an unknown card', () => {
+  const { columns } = buildBoard()
+
+  expect(updateCard(columns, 'missing-card', fields)).toEqual(columns)
+})
+
+it('does not mutate the columns when updating a card', () => {
+  const { columns, a } = buildBoard()
+  const snapshot = structuredClone(columns)
+
+  updateCard(columns, a.id, fields)
+
+  expect(columns).toEqual(snapshot)
 })
