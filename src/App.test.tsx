@@ -197,3 +197,33 @@ it('does not move focus to the column + button when the edited card stays visibl
     screen.getByRole('button', { name: `Add card to ${first.title}` }),
   ).not.toHaveFocus()
 })
+
+const themeKey = 'kanban-theme'
+const toDarkName = 'Switch to dark mode'
+const toLightName = 'Switch to light mode'
+
+it('starts dark when no theme was saved', () => {
+  render(<App />)
+  expect(screen.getByRole('button', { name: toLightName })).toBeInTheDocument()
+  expect(document.documentElement).toHaveClass('dark')
+})
+
+it('saves the theme when it is toggled', async () => {
+  const user = userEvent.setup()
+
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: toLightName }))
+  expect(localStorage.getItem(themeKey)).toBe('light')
+  expect(document.documentElement).not.toHaveClass('dark')
+
+  await user.click(screen.getByRole('button', { name: toDarkName }))
+  expect(localStorage.getItem(themeKey)).toBe('dark')
+  expect(document.documentElement).toHaveClass('dark')
+})
+
+it('restores a saved light theme on load', () => {
+  localStorage.setItem(themeKey, 'light')
+  render(<App />)
+  expect(screen.getByRole('button', { name: toDarkName })).toBeInTheDocument()
+  expect(document.documentElement).not.toHaveClass('dark')
+})

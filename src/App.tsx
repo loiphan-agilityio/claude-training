@@ -25,14 +25,28 @@ const dotColors: Record<string, string> = {
   done: 'bg-emerald-500',
 }
 
-function App() {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof document !== 'undefined') {
-      return document.documentElement.classList.contains('dark')
-    }
+// index.html reads this key too, before first paint: keep them in sync
+const themeKey = 'kanban-theme'
 
-    return true
+function App() {
+  // storage can be blocked (private mode, cookies off): then dark, and not remembered
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem(themeKey) !== 'light'
+    } catch {
+      return true
+    }
   })
+
+  const toggleTheme = () => {
+    setIsDark(!isDark)
+
+    try {
+      localStorage.setItem(themeKey, isDark ? 'light' : 'dark')
+    } catch {
+      // not remembered
+    }
+  }
 
   useEffect(() => {
     if (isDark) {
@@ -166,7 +180,7 @@ function App() {
             {/* Theme Toggle Button */}
             <button
               type="button"
-              onClick={() => setIsDark((prev) => !prev)}
+              onClick={toggleTheme}
               aria-label={
                 isDark ? 'Switch to light mode' : 'Switch to dark mode'
               }
