@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
 import { initialColumns } from './board'
 import { buildCard, buildColumn } from './mocks/board'
@@ -224,6 +224,30 @@ it('saves the theme when it is toggled', async () => {
 it('restores a saved light theme on load', () => {
   localStorage.setItem(themeKey, 'light')
   render(<App />)
+  expect(screen.getByRole('button', { name: toDarkName })).toBeInTheDocument()
+  expect(document.documentElement).not.toHaveClass('dark')
+})
+
+// storage can be blocked (private mode, cookies off): the app must still work
+const blockStorage = (method: 'getItem' | 'setItem') =>
+  vi.spyOn(Storage.prototype, method).mockImplementation(() => {
+    throw new DOMException('blocked', 'SecurityError')
+  })
+
+afterEach(() => vi.restoreAllMocks())
+
+it('starts dark when storage cannot be read', () => {
+  blockStorage('getItem')
+  render(<App />)
+  expect(screen.getByRole('button', { name: toLightName })).toBeInTheDocument()
+})
+
+it('still toggles the theme when storage cannot be written', async () => {
+  const user = userEvent.setup()
+
+  blockStorage('setItem')
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: toLightName }))
   expect(screen.getByRole('button', { name: toDarkName })).toBeInTheDocument()
   expect(document.documentElement).not.toHaveClass('dark')
 })

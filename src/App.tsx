@@ -39,10 +39,12 @@ function App() {
   })
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
+    const next = !isDark
+
+    setIsDark(next)
 
     try {
-      localStorage.setItem(themeKey, isDark ? 'light' : 'dark')
+      localStorage.setItem(themeKey, next ? 'dark' : 'light')
     } catch {
       // not remembered
     }
